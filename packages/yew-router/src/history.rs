@@ -3,6 +3,7 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use std::fmt::Display;
 
 use gloo::events::EventListener;
 use gloo_utils::window;
@@ -119,6 +120,60 @@ pub trait History: Clone + PartialEq {
     where
         Q: Serialize,
         T: Serialize + 'static;
+
+    /*-------------------------- FRAGMENT --------------------------*/
+
+    fn push_with_fragment<S>(&self, route: impl Routable, fragment: S) -> HistoryResult<()>
+    where 
+        S: Display;
+
+    fn push_with_state_and_fragment<T, S>(&self, route: impl Routable, state: T, fragment: S) -> HistoryResult<()>
+    where
+        T: Serialize + 'static,
+        S: Display;
+
+    fn push_with_query_and_fragment<Q, S>(&self, route: impl Routable, query: Q, fragment: S) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        S: Display;
+
+    fn push_with_query_and_state_and_fragment<Q, T, S>(
+        &self,
+        route: impl Routable,
+        query: Q,
+        state: T,
+        fragment: S,
+    ) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        T: Serialize + 'static,
+        S: Display;
+
+    fn replace_with_fragment<S>(&self, route: impl Routable, fragment: S) -> HistoryResult<()>
+    where 
+        S: Display;
+
+    fn replace_with_state_and_fragment<T, S>(&self, route: impl Routable, state: T, fragment: S) -> HistoryResult<()>
+    where
+        T: Serialize + 'static,
+        S: Display;
+
+    fn replace_with_query_and_fragment<Q, S>(&self, route: impl Routable, query: Q, fragment: S) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        S: Display;
+
+    fn replace_with_query_and_state_and_fragment<Q, T, S>(
+        &self,
+        route: impl Routable,
+        query: Q,
+        state: T,
+        fragment: S,
+    ) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        T: Serialize + 'static,
+        S: Display;
 
     /// Creates a Listener that will be notified when current state changes.
     ///
@@ -281,6 +336,140 @@ impl History for BrowserHistory {
         let state = serde_wasm_bindgen::to_value(&state)?;
         self.inner
             .replace_state_with_url(&state, "", Some(&format!("{}?{}", url, query)))
+            .expect("failed to replace history.");
+
+        self.notify_callbacks();
+        Ok(())
+    }
+
+    /*-------------------------- FRAGMENT --------------------------*/
+
+    fn push_with_fragment<S>(&self, route: impl Routable, fragment: S) -> HistoryResult<()>
+    where 
+        S: Display,
+    {
+        let url = Self::route_to_url(route);
+        self.inner
+            .push_state_with_url(&JsValue::NULL, "", Some(&format!("{}#{}", url, fragment)))
+            .expect("failed to push fragment.");
+
+        self.notify_callbacks();
+        Ok(())
+    }
+
+    fn push_with_state_and_fragment<T, S>(&self, route: impl Routable, state: T, fragment: S) -> HistoryResult<()>
+    where
+        T: Serialize + 'static,
+        S: Display, 
+    {
+        let url = Self::route_to_url(route);
+        let state = serde_wasm_bindgen::to_value(&state)?;
+        self.inner
+            .push_state_with_url(&state, "", Some(&format!("{}#{}", url, fragment)))
+            .expect("failed to push state.");
+
+        self.notify_callbacks();
+        Ok(())
+    }
+
+    fn push_with_query_and_fragment<Q, S>(&self, route: impl Routable, query: Q, fragment: S) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        S: Display, 
+    {
+        let url = Self::route_to_url(route);
+        let query = serde_urlencoded::to_string(query)?;
+        self.inner
+            .push_state_with_url(&JsValue::NULL, "", Some(&format!("{}?{}#{}", url, query, fragment)))
+            .expect("failed to push history.");
+
+        self.notify_callbacks();
+        Ok(())
+    }
+
+    fn push_with_query_and_state_and_fragment<Q, T, S>(
+        &self,
+        route: impl Routable,
+        query: Q,
+        state: T,
+        fragment: S,
+    ) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        T: Serialize + 'static,
+        S: Display,
+    {
+        let url = Self::route_to_url(route);
+        let query = serde_urlencoded::to_string(query)?;
+        let state = serde_wasm_bindgen::to_value(&state)?;
+        self.inner
+            .push_state_with_url(&state, "", Some(&format!("{}?{}#{}", url, query, fragment)))
+            .expect("failed to push history.");
+
+        self.notify_callbacks();
+        Ok(())
+    }
+
+    fn replace_with_fragment<S>(&self, route: impl Routable, fragment: S) -> HistoryResult<()>
+    where 
+        S: Display, 
+    {
+        let url = Self::route_to_url(route);
+        self.inner
+            .replace_state_with_url(&JsValue::NULL, "", Some(&format!("{}#{}", url, fragment)))
+            .expect("failed to replace history.");
+
+        self.notify_callbacks();
+        Ok(())
+    }
+
+    fn replace_with_state_and_fragment<T, S>(&self, route: impl Routable, state: T, fragment: S) -> HistoryResult<()>
+    where
+        T: Serialize + 'static,
+        S: Display, 
+    {
+        let url = Self::route_to_url(route);
+        let state = serde_wasm_bindgen::to_value(&state)?;
+        self.inner
+            .replace_state_with_url(&state, "", Some(&format!("{}#{}", url, fragment)))
+            .expect("failed to replace history.");
+
+        self.notify_callbacks();
+        Ok(())
+    }
+
+    fn replace_with_query_and_fragment<Q, S>(&self, route: impl Routable, query: Q, fragment: S) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        S: Display, 
+    {
+        let url = Self::route_to_url(route);
+        let query = serde_urlencoded::to_string(query)?;
+        self.inner
+            .replace_state_with_url(&JsValue::NULL, "", Some(&format!("{}?{}#{}", url, query, fragment)))
+            .expect("failed to replace history.");
+
+        self.notify_callbacks();
+        Ok(())
+    }
+
+    fn replace_with_query_and_state_and_fragment<Q, T, S>(
+        &self,
+        route: impl Routable,
+        query: Q,
+        state: T,
+        fragment: S,
+    ) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        T: Serialize + 'static,
+        S: Display, 
+    {
+        let url = Self::route_to_url(route);
+        let query = serde_urlencoded::to_string(query)?;
+        let state = serde_wasm_bindgen::to_value(&state)?;
+        self.inner
+            .replace_state_with_url(&state, "", Some(&format!("{}?{}#{}", url, query, fragment)))
             .expect("failed to replace history.");
 
         self.notify_callbacks();
@@ -620,6 +809,92 @@ impl History for AnyHistory {
     {
         let Self::Browser(self_) = self;
         self_.replace_with_query_and_state(route, query, state)
+    }
+
+    /*-------------------------- FRAGMENT --------------------------*/
+
+    fn push_with_fragment<S>(&self, route: impl Routable, fragment: S) -> HistoryResult<()>
+    where 
+        S: Display,
+    {
+        let Self::Browser(self_) = self;
+        self_.push_with_fragment(route, fragment)
+    }
+
+    fn push_with_state_and_fragment<T, S>(&self, route: impl Routable, state: T, fragment: S) -> HistoryResult<()>
+    where
+        T: Serialize + 'static,
+        S: Display, 
+    {
+        let Self::Browser(self_) = self;
+        self_.push_with_state_and_fragment(route, state, fragment)
+    }
+
+    fn push_with_query_and_fragment<Q, S>(&self, route: impl Routable, query: Q, fragment: S) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        S: Display, 
+    {
+        let Self::Browser(self_) = self;
+        self_.push_with_query_and_fragment(route, query, fragment)
+    }
+
+    fn push_with_query_and_state_and_fragment<Q, T, S>(
+        &self,
+        route: impl Routable,
+        query: Q,
+        state: T,
+        fragment: S,
+    ) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        T: Serialize + 'static,
+        S: Display, 
+    {
+        let Self::Browser(self_) = self;
+        self_.push_with_query_and_state_and_fragment(route, query, state, fragment)
+    }
+
+    fn replace_with_fragment<S>(&self, route: impl Routable, fragment: S) -> HistoryResult<()>
+    where 
+        S: Display, 
+    {
+        let Self::Browser(self_) = self;
+        self_.replace_with_fragment(route, fragment)
+    }
+
+    fn replace_with_state_and_fragment<T, S>(&self, route: impl Routable, state: T, fragment: S) -> HistoryResult<()>
+    where
+        T: Serialize + 'static,
+        S: Display, 
+    {
+        let Self::Browser(self_) = self;
+        self_.replace_with_state_and_fragment(route, state, fragment)
+    }
+
+    fn replace_with_query_and_fragment<Q, S>(&self, route: impl Routable, query: Q, fragment: S) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        S: Display,
+    {
+        let Self::Browser(self_) = self;
+        self_.replace_with_query_and_fragment(route, query, fragment)
+    }
+
+    fn replace_with_query_and_state_and_fragment<Q, T, S>(
+        &self,
+        route: impl Routable,
+        query: Q,
+        state: T,
+        fragment: S,
+    ) -> HistoryResult<()>
+    where
+        Q: Serialize,
+        T: Serialize + 'static,
+        S: Display,
+    {
+        let Self::Browser(self_) = self;
+        self_.replace_with_query_and_state_and_fragment(route, query, state, fragment)
     }
 
     fn listen<CB>(&self, callback: CB) -> HistoryListener
